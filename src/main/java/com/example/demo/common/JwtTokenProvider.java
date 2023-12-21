@@ -19,6 +19,8 @@ import com.example.demo.dto.TokenInfo;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -39,18 +41,21 @@ public class JwtTokenProvider {
 	    }
 	 
 	    // 유저 정보를 가지고 AccessToken, RefreshToken 을 생성하는 메서드
-	    public TokenInfo generateToken(Authentication authentication) {
+	    // public TokenInfo generateToken(Authentication authentication) {
+	    public TokenInfo generateToken(String id,String[] authorities) {
 	        // 권한 가져오기
-	        String authorities = authentication.getAuthorities().stream()
-	                .map(GrantedAuthority::getAuthority)
-	                .collect(Collectors.joining(","));
-	 
+	        // String authorities = authentication.getAuthorities().stream()
+	        //         .map(GrantedAuthority::getAuthority)
+	        //         .collect(Collectors.joining(","));
+			
 	        long now = (new Date()).getTime();
 	        // Access Token 생성
 	        Date accessTokenExpiresIn = new Date(now + 86400000);
 	        String accessToken = Jwts.builder()
-	                .setSubject(authentication.getName())
-	                .claim("auth", authorities)
+	                // .setSubject(authentication.getName())
+	                .setSubject(id)
+	                // .claim("auth", authorities)
+	                .claim("auth", String.join(",", authorities))
 	                .setExpiration(accessTokenExpiresIn)
 	                .signWith(key, SignatureAlgorithm.HS256)
 	                .compact();
@@ -72,7 +77,7 @@ public class JwtTokenProvider {
 	    public Authentication getAuthentication(String accessToken) {
 	        // 토큰 복호화
 	        Claims claims = parseClaims(accessToken);
-	 
+
 	        if (claims.get("auth") == null) {
 	            throw new RuntimeException("권한 정보가 없는 토큰입니다.");
 	        }
@@ -95,14 +100,18 @@ public class JwtTokenProvider {
 	            return true;
 	        } catch (io.jsonwebtoken.security.SecurityException | MalformedJwtException e) {
 	            log.info("Invalid JWT Token", e);
+				throw new JwtException("1", e);
 	        } catch (ExpiredJwtException e) {
-	            log.info("Expired JWT Token", e);
+				log.info("Expired JWT Token", e);
+				throw new JwtException("2", e);
 	        } catch (UnsupportedJwtException e) {
-	            log.info("Unsupported JWT Token", e);
+				log.info("Unsupported JWT Token", e);
+				throw new JwtException("3", e);
 	        } catch (IllegalArgumentException e) {
-	            log.info("JWT claims string is empty.", e);
+				log.info("JWT claims string is empty.", e);
+				throw new JwtException("4", e);
 	        }
-	        return false;
+	        // return false;
 	    }
 	 
 	    private Claims parseClaims(String accessToken) {

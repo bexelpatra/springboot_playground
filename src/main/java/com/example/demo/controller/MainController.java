@@ -1,24 +1,41 @@
 package com.example.demo.controller;
 
+import java.beans.beancontext.BeanContext;
+import java.beans.beancontext.BeanContextSupport;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collector;
-import java.util.stream.Collectors;
 
+import org.apache.naming.factory.BeanFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.expression.EvaluationContext;
+import org.springframework.expression.Expression;
+import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.SimpleEvaluationContext;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.web.authentication.AuthenticationConverter;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.demo.common.JwtTokenProvider;
+import com.example.demo.dto.TokenInfo;
 import com.example.demo.entity.SpringTestEntity;
 import com.example.demo.entity.compositeKey.SpringTestEntityKey;
 import com.example.demo.repository.SpringTestRepository;
+import com.example.demo.service.MyServiceImpl;
+import com.example.demo.utils.Util1;
 
 import jakarta.servlet.ServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -28,12 +45,20 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequestMapping(path = "/main")
 @RequiredArgsConstructor
+@PropertySource("classpath:test.properties")
 public class MainController {
 
 	private final SpringTestRepository springTestRepository;
 	private final CacheManager cacheManager;
+	private final MyServiceImpl myServiceImpl;
+	private final JwtTokenProvider jwtTokenProvider;
+
+	private final Util1 util;
+	
 	@PostMapping(path = "/test1")
 	public ResponseEntity<Map<String,Object>> test1(ServletRequest request,@RequestBody Map<String,Object> map) {
+		util.a();
+		
 		StringBuilder sb = new StringBuilder();
 		sb.append("parameter check ");
 
@@ -72,6 +97,22 @@ public class MainController {
 		cacheAll("캐시 출력");
 		return ResponseEntity.ok(map);  
 	}
+	@PostMapping(path = "/genToken")
+	public ResponseEntity<Map<String,Object>> genToken(ServletRequest request,@RequestBody Map<String,Object> map) {
+		Map<String,Object> result = new HashMap<>();
+		String id = map.getOrDefault("id", "-1").toString();
+		List<String> list = (ArrayList) map.get("auth");
+		TokenInfo tokenInfo = jwtTokenProvider.generateToken(id, list.toArray(new String[list.size()]));
+		result.put(id, tokenInfo);
+		return ResponseEntity.ok(result);
+	}
+	@PostMapping(path = "/check")
+	public ResponseEntity<Map<String,Object>> check(ServletRequest request,@RequestBody Map<String,Object> map) {
+		Map<String,Object> result = new HashMap<>();
+		log.info("들어옴");
+		return ResponseEntity.ok(result);
+	}
+	
 
 	public void cacheAll(String name){
 		System.out.println(name);
@@ -89,5 +130,20 @@ public class MainController {
             }
         }
 		System.out.println(sb.toString());
+	}
+	//https://docs.spring.io/spring-framework/reference/core/expressions/language-ref/operator-elvis.html
+	public static void main(String[] args) {
+		ExpressionParser parser = new SpelExpressionParser();
+		// Expression expression = parser.parseExpression("new Date().getTime()");
+		
+		EvaluationContext context = SimpleEvaluationContext.forReadWriteDataBinding().build();
+		context.setVariable("newName", "Mike Tesla");
+
+		// Expression expression = parser.parseExpression("new java.util.Date()");
+		Expression expression = parser.parseExpression("#newName");
+		System.out.println(expression.getValue());
+		// Integer value = expression.getValue(Integer.class);
+		// System.out.println(value);
+		
 	}
 }

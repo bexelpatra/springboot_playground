@@ -5,10 +5,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.util.AntPathMatcher;
 
 import com.example.demo.common.JwtTokenProvider;
 import com.example.demo.common.MyMapper;
@@ -22,26 +25,24 @@ import lombok.extern.slf4j.Slf4j;
 @EnableWebSecurity
 @RequiredArgsConstructor
 @Slf4j
-public class SecurityConfig {
+public class SecurityConfig  {
 
     private final JwtTokenProvider jwtTokenProvider;
     private final MyMapper mapper;
- 
+    
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
     	log.info("");
-    	return	http
-                .csrf().disable()
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and()
-                .authorizeRequests()
-                .requestMatchers("/").permitAll()
-                
-//                .requestMatchers("/members/test").hasRole("USER")
-//                .anyRequest().authenticated()
-                .and()
+        return	http
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(management -> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(t -> t
+                .requestMatchers(new AntPathRequestMatcher("/main/check")).hasRole("a")
+                // .requestMatchers(new AntPathRequestMatcher("/**"))
+                .anyRequest().permitAll()
+                )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider), UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(new MyCustomFilter(mapper),JwtAuthenticationFilter.class)
+                .addFilterBefore(new MyCustomFilter(mapper), JwtAuthenticationFilter.class)
                 
                 .build();
     }
