@@ -36,7 +36,8 @@ public class SecurityConfig  {
         return	http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(management -> management.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(t -> t
+                .authorizeHttpRequests(t -> 
+                t
                 .requestMatchers(new AntPathRequestMatcher("/main/check")).hasRole("a")
                 // .requestMatchers(new AntPathRequestMatcher("/**"))
                 .anyRequest().permitAll()

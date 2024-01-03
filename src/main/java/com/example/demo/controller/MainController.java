@@ -9,12 +9,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.naming.factory.BeanFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
@@ -53,6 +55,7 @@ public class MainController {
 	private final MyServiceImpl myServiceImpl;
 	private final JwtTokenProvider jwtTokenProvider;
 
+	private final RedisTemplate<String,String> redisTemplate;
 	private final Util1 util;
 	
 	@PostMapping(path = "/test1")
@@ -130,6 +133,20 @@ public class MainController {
             }
         }
 		System.out.println(sb.toString());
+	}
+
+	@PostMapping(path = "/redis")
+	public ResponseEntity<Map<String,Object>> redis(ServletRequest request,@RequestBody Map<String,Object> map) {
+		Map<String,Object> result = new HashMap<>();
+		String id = map.getOrDefault("id", "-1").toString();
+		for (int i = 0; i < 4; i++) {
+			redisTemplate.opsForValue().set("id"+i, String.valueOf(i));
+		}
+		redisTemplate.opsForValue().set("bomb", "100", 10, TimeUnit.SECONDS);
+		redisTemplate.opsForValue().getAndExpire("id2", 5,TimeUnit.SECONDS);
+		
+		redisTemplate.keys("*").forEach(t -> log.info("{}",t));
+		return ResponseEntity.ok(result);
 	}
 	//https://docs.spring.io/spring-framework/reference/core/expressions/language-ref/operator-elvis.html
 	public static void main(String[] args) {
