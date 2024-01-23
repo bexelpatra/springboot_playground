@@ -2,13 +2,19 @@ package com.example.demo.config;
 
 import javax.sql.DataSource;
 
+import org.apache.ibatis.session.SqlSessionFactory;
+import org.mybatis.spring.SqlSessionFactoryBean;
+import org.mybatis.spring.SqlSessionTemplate;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -27,15 +33,24 @@ import lombok.RequiredArgsConstructor;
 )
 public class DBConfig {
 
-
+    @Value("${spring.datasource.hikari.driver-class-name}")
+    private String driverClassName;
+    @Value("${spring.datasource.hikari.jdbc-url}")
+    private String jdbcUrl;
+    @Value("${spring.datasource.hikari.username}")
+    private String username;
+    @Value("${spring.datasource.hikari.password}")
+    private String password;
+    
     @Bean(value = "dataSource1")
     @Primary
     public DataSource dataSource() {
     	HikariConfig config = new HikariConfig();
-    	config.setDriverClassName("org.mariadb.jdbc.Driver");
-    	config.setJdbcUrl("jdbc:mariadb://192.168.0.44:3306/TEST_DB?characterEncoding=UTF-8&serverTimezone=UTC");
-    	config.setUsername("root");
-    	config.setPassword("qlalf52%");
+    	config.setDriverClassName(driverClassName);
+    	config.setJdbcUrl(jdbcUrl);
+    	config.setUsername(username);
+    	config.setPassword(password);
+
 //    	config.addDataSourceProperty("driverClassName", "org.mariadb.jdbc.Driver");
 //    	config.addDataSourceProperty("jdbcUrl", "jdbc:mariadb://192.168.0.44:3306/TEST_DB?characterEncoding=UTF-8&serverTimezone=UTC");
 //    	config.addDataSourceProperty("username", "root");
@@ -49,7 +64,7 @@ public class DBConfig {
     public LocalContainerEntityManagerFactoryBean entityManager(EntityManagerFactoryBuilder builder, @Qualifier("dataSource1")DataSource dataSource) {
         return builder.dataSource(dataSource)
                 .packages("com.example.demo.entity")
-                .persistenceUnit("test_db")
+                .persistenceUnit("test")
                 .build();
     }
 
@@ -69,4 +84,26 @@ public class DBConfig {
 //        return new StandardServletMultipartResolver();
 //    }
 
+    /*
+     * mybatis 설정
+     */
+
+    // @Bean
+    // public SqlSessionFactory sessionFactory(DataSource dataSource)throws Exception{
+    //     SqlSessionFactoryBean bean = new SqlSessionFactoryBean();
+    //     bean.setDataSource(dataSource);
+    //     bean.setConfigLocation(new ClassPathResource(""));
+        
+    //     return bean.getObject();
+    // }
+    
+    // @Bean
+    // public SqlSessionTemplate sqlSessionTemplate(SqlSessionFactory sqlSessionFactory){
+    //     return new SqlSessionTemplate(sqlSessionFactory);
+    // }
+    
+    // @Bean
+    // public PlatformTransactionManager transactionManager(DataSource dataSource){
+    //     return new DataSourceTransactionManager(dataSource);
+    // }
 }
