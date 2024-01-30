@@ -2,6 +2,9 @@ package com.example.demo.controller;
 
 import java.beans.beancontext.BeanContext;
 import java.beans.beancontext.BeanContextSupport;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -12,11 +15,16 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.naming.factory.BeanFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.data.redis.connection.stream.Record;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StreamOperations;
+import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
@@ -37,6 +45,7 @@ import com.example.demo.entity.SpringTestEntity;
 import com.example.demo.entity.compositeKey.SpringTestEntityKey;
 import com.example.demo.repository.SpringTestRepository;
 import com.example.demo.service.MyServiceImpl;
+import com.example.demo.utils.RedisUtil;
 import com.example.demo.utils.Util1;
 
 import jakarta.servlet.ServletRequest;
@@ -47,7 +56,6 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @RequestMapping(path = "/main")
 @RequiredArgsConstructor
-@PropertySource("classpath:test.properties")
 public class MainController {
 
 	private final SpringTestRepository springTestRepository;
@@ -134,7 +142,8 @@ public class MainController {
         }
 		System.out.println(sb.toString());
 	}
-
+	@Autowired
+	private RedisUtil redisUtil;
 	@PostMapping(path = "/redis")
 	public ResponseEntity<Map<String,Object>> redis(ServletRequest request,@RequestBody Map<String,Object> map) {
 		Map<String,Object> result = new HashMap<>();
@@ -142,10 +151,35 @@ public class MainController {
 		for (int i = 0; i < 4; i++) {
 			redisTemplate.opsForValue().set("id"+i, String.valueOf(i));
 		}
-		redisTemplate.opsForValue().set("bomb", "100", 10, TimeUnit.SECONDS);
-		redisTemplate.opsForValue().getAndExpire("id2", 5,TimeUnit.SECONDS);
+		// redisTemplate.opsForValue().set("bomb", "100", 10, TimeUnit.SECONDS);
+		// redisTemplate.opsForValue().getAndExpire("id2", 5,TimeUnit.SECONDS);
 		
-		redisTemplate.keys("*").forEach(t -> log.info("{}",t));
+		Map<String,String> newMap = new HashMap<>();
+		map.keySet().forEach(t -> newMap.put(t, map.get(t).toString()));
+		redisUtil.stream1(newMap);
+		return ResponseEntity.ok(result);
+	}
+
+	@PostMapping(path = "/redis/stream")
+	public ResponseEntity<Map<String,Object>> redisStream(ServletRequest request,@RequestBody Map<String,Object> map) {
+		Map<String,Object> result = new HashMap<>();
+		String id = map.getOrDefault("id", "-1").toString();
+		StreamOperations<String, String, String> opsForStream = redisTemplate.opsForStream();
+		int sec = 5;
+		ZonedDateTime now = ZonedDateTime.now();
+		ZonedDateTime next = now.plus(sec, ChronoUnit.SECONDS);
+		Map<String,String> rec = new HashMap<>();
+		int count  =0;
+		while(next.toEpochSecond() - ZonedDateTime.now().toEpochSecond() >0){
+
+			rec.put("timeStamp", String.valueOf(new Date().getTime()));
+			rec.put("key1", String.valueOf((int)(Math.random()*1000)));
+			// opsForStream.add(Record.of(rec));
+			opsForStream.add("123", rec);
+			count +=1;
+		}
+		log.info("#################### {} #####################",count);
+		
 		return ResponseEntity.ok(result);
 	}
 	//https://docs.spring.io/spring-framework/reference/core/expressions/language-ref/operator-elvis.html
@@ -159,6 +193,7 @@ public class MainController {
 		// Expression expression = parser.parseExpression("new java.util.Date()");
 		Expression expression = parser.parseExpression("#newName");
 		System.out.println(expression.getValue());
+		
 		// Integer value = expression.getValue(Integer.class);
 		// System.out.println(value);
 		

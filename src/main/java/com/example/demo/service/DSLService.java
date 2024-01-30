@@ -22,6 +22,7 @@ public class DSLService {
         Query query = jpaQueryFactory.selectFrom(q).createQuery();
         JPAQuery<BlockCahinBackUpHist> where = jpaQueryFactory.selectFrom(q).where(q.svcId.eq(a)).limit(20);
         List<BlockCahinBackUpHist> list = where.fetch();
+        
         System.out.println("yes");
     }
 }
